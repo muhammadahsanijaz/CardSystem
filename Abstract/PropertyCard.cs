@@ -19,6 +19,16 @@ namespace MoonKart
         public PropertyType propertyType;
         public float propertyValue;
 
+        public PropertyModel()
+        {
+
+        }
+
+        public PropertyModel(PropertyModel primaryProperty)
+        {
+            this.propertyType = primaryProperty.propertyType;
+            this.propertyValue = primaryProperty.propertyValue;
+        }
     }
 
     [System.Serializable]
@@ -32,8 +42,19 @@ namespace MoonKart
 
         public PropertyCard(int id, CardTemplateModel cardTemplateModel) : base(id, cardTemplateModel)
         {
-            _primaryProperty = cardTemplateModel.PrimaryProperty;
-            _secondaryProperty = cardTemplateModel.SecondaryProperty;
+            //_primaryProperty = cardTemplateModel.PrimaryProperty;
+            //_secondaryProperty = cardTemplateModel.SecondaryProperty;
         }
+
+        public void SetPrimaryProperty(PropertyModel Property)
+        {
+            _primaryProperty = new PropertyModel(Property);
+        }
+
+        public void SetSecondaryProperty(PropertyModel Property)
+        {
+            _secondaryProperty = new PropertyModel(Property);
+        }
+
     }
 }

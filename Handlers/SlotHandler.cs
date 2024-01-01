@@ -1,13 +1,8 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using MoonKart.UI;
+using System;
 using TMPro;
 using UnityEngine;
-using UnityEngine.Analytics;
-using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.UI;
-
 namespace MoonKart
 {
     public class SlotHandler : UIWidget
@@ -24,7 +19,7 @@ namespace MoonKart
 
                 return _card;
             }
-            private set => _card = value;
+            
         }
 
         //Private
@@ -43,46 +38,52 @@ namespace MoonKart
 
         public virtual void UnEquipCard(CardCallFrom callFrom)
         {
-            if (Card != null)
+            if (_card != null)
             {
-                Card.UnEquipCard();
+                _card.UnEquipCard();
             }
 
-            Card = null;
+            _card = null;
             ChangeSlotApperance(callFrom);
         }
 
-        public virtual void UnStackCard()
+        public virtual void UnStakeCard()
         {
-            Card.UnStackCard();
-            Card = null;
+            _card.StackedTime = DateTime.UtcNow.AddMinutes(Global.Settings.CardsSetting.UnstakingCoolDownTimeInMinutes);
+            _card.CoolDownCard();
+            Context.CardsManager.OnStatusChangeToStake();
+            _card.UnapplyCard();
+            _card = null;
             NameText.text = "";
         }
 
         public virtual void EquipCard(Card card, CardCallFrom callFrom)
         {
-            if (Card != null)
+            if (_card != null)
             {
                 switch (callFrom)
                 {
                     case CardCallFrom.Presets:
-                        Card.UnEquipCard();
+                        _card.UnEquipCard();
                         break;
                     case CardCallFrom.Vault:
-                        Card.UnStackCard();
+                        _card.StackedTime = DateTime.UtcNow.AddMinutes(Global.Settings.CardsSetting.UnstakingCoolDownTimeInMinutes);
+                        _card.CoolDownCard();
+                        Context.CardsManager.OnStatusChangeToStake();
+                        _card.UnapplyCard();
                         break;
                 }
             }
 
-            Card = card;
+            _card = card;
 
             switch (callFrom)
             {
                 case CardCallFrom.Presets:
-                    Card.EquipCard();
+                    _card.EquipCard();
                     break;
                 case CardCallFrom.Vault:
-                    Card.StackCard();
+                    _card.ApplyCard();
                     break;
             }
 
@@ -92,43 +93,43 @@ namespace MoonKart
 
         public virtual void AssignSlot(Card card, CardCallFrom callFrom)
         {
-            Card = card;
+            _card = card;
             ChangeSlotApperance(callFrom);
         }
 
         internal virtual void UpdateSlot(Card card, CardUseState cardUseState, CardCallFrom cardCallFrom = CardCallFrom.Presets)
         {
-            Debug.LogError("Slot " + gameObject.name);
             switch (cardUseState)
             {
                 case CardUseState.Equip:
                     switch (cardCallFrom)
                     {
                         case CardCallFrom.Presets:
-                            Global.PlayerService.CarSetupUpdated?.Invoke(card, transform.GetSiblingIndex(), true);
+                            Context.CardsManager.CarSetupUpdated?.Invoke(card, transform.GetSiblingIndex(), true);
                             EquipCard(card, cardCallFrom);
+                            ChangeModelApperance();
                             break;
                         case CardCallFrom.Vault:
                             EquipCard(card, cardCallFrom);
                             break;
                     }
-
+                    ChangeSlotApperance(cardCallFrom);
                     break;
                 case CardUseState.UnEquip:
 
                     switch (cardCallFrom)
                     {
                         case CardCallFrom.Presets:
-                            Global.PlayerService.CarSetupUpdated?.Invoke(card, transform.GetSiblingIndex(), false);
+                            Context.CardsManager.CarSetupUpdated?.Invoke(card, transform.GetSiblingIndex(), false);
                             UnEquipCard(cardCallFrom);
-
+                            ChangeModelApperance();
                             break;
                         case CardCallFrom.Vault:
                             UnEquipCard(cardCallFrom);
 
                             break;
                     }
-
+                    ChangeSlotApperance(cardCallFrom);
                     break;
             }
         }
@@ -139,19 +140,24 @@ namespace MoonKart
             {
                 case CardCallFrom.Presets:
                     NameText.SetTextSafe((_card != null) ? _card.CardName : "");
-                    cardIcon.sprite = (Card != null && Card.Icon != null) ? Card.Icon : Global.Settings.CardsSetting.addIconSlot;
+                    cardIcon.sprite = (_card != null && _card.Icon != null) ? _card.Icon : Global.Settings.CardsSetting.addIconSlot;
                     break;
                 case CardCallFrom.Vault:
-                    cardIcon.sprite = (Card != null && Card.Icon != null) ? Card.Icon : Global.Settings.CardsSetting.defaultIconSlot;
+                    cardIcon.sprite = (_card != null && _card.Icon != null) ? _card.Icon : Global.Settings.CardsSetting.defaultIconSlot;
                     break;
             }
 
             ChangeSlotBorder();
         }
 
+        protected virtual void ChangeModelApperance()
+        {
+
+        }
+
         public virtual void ChangeSlotBorder()
         {
-            if (_card != null)
+            if (_card != null && _card.CardName != "")
             {
                 slotBoard.sprite = Global.Settings.CardsSetting.slotBorderByRarity[(int)_card.CardRarity];
             }

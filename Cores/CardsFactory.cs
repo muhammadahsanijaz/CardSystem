@@ -38,6 +38,11 @@ namespace MoonKart {
         {
             return new PowerupCard(id, cardTemplateModel);
         }
+
+        public FuelCard CreateFuelCard(int id, CardTemplateModel cardTemplateModel)
+        {
+            return new FuelCard(id, cardTemplateModel);
+        }
         #endregion
 
         #region FilterRegion
@@ -137,63 +142,20 @@ namespace MoonKart {
             return default;
         }
 
-        // All Sorted Functions
-        public List<Card> GetSortedCardsByTypeOf(List<Card> cards)
+        public AccessoriesCard GetFirstAccessoriesCardsByTypeOf(List<Card> cards, AccessoriesCard.AccessoriesType subtype)
         {
-            List<Card> sortedCards = new List<Card>();
-            sortedCards.AddRange(cards.FindAll(x => x.GetType() == typeof(VehicleCard)));
-            sortedCards.AddRange(cards.FindAll(x => x.GetType() == typeof(DriverCard)));
-            // Sorting Tech Cards
-            List<Card> techCards = cards.FindAll(x => x.GetType() == typeof(TechCard));
-            string[] techTypeNames = Enum.GetNames(typeof(TechCard.TechType));
-            foreach (var techTypeName in techTypeNames)
+            foreach (var card in cards)
             {
-                sortedCards.AddRange(techCards.FindAll(x => (x as TechCard)?.MyTechType.ToString() == techTypeName));
+                if (card.GetType() == typeof(AccessoriesCard))
+                {
+                    var AC = (AccessoriesCard)card;
+                    if (AC.MyAccessoriesType == subtype)
+                    {
+                        return AC;
+                    }
+                }
             }
-            // Sorting Powerup Cards
-            List<Card> powerupCards = cards.FindAll(x => x.GetType() == typeof(PowerupCard));
-            string[] powerupTypeNames = Enum.GetNames(typeof(TechCard.TechType));
-            foreach (var powerupTypeName in powerupTypeNames)
-            {
-                sortedCards.AddRange(powerupCards.FindAll(x => (x as PowerupCard)?.MyPowerupType.ToString() == powerupTypeName));
-            }
-            // Sorting Accessories Cards
-            List<Card> accessoriesCards = cards.FindAll(x => x.GetType() == typeof(AccessoriesCard));
-            string[] accessoriesTypeNames = Enum.GetNames(typeof(TechCard.TechType));
-            foreach (var accessoriesTypeName in accessoriesTypeNames)
-            {
-                sortedCards.AddRange(accessoriesCards.FindAll(x => (x as AccessoriesCard)?.MyAccessoriesType.ToString() == accessoriesTypeName));
-            }
-            return sortedCards;
-        }
-
-        public List<Card> GetSortedCardsByRarity(List<Card> cards)
-        {
-            List<Card> newCards = new List<Card>();
-            newCards.AddRange(cards.FindAll(x => x.CardRarity == CardRarity.Legendary));
-            newCards.AddRange(cards.FindAll(x => x.CardRarity == CardRarity.Epic));
-            newCards.AddRange(cards.FindAll(x => x.CardRarity == CardRarity.Rare));
-            newCards.AddRange(cards.FindAll(x => x.CardRarity == CardRarity.Common));
-            return newCards;
-        }
-
-        public List<Card> GetSortedCardsByRarity(List<Card> cards, CardRarity cardRarity)
-        {
-            List<Card> newCards = new List<Card>();
-            newCards.AddRange(cards.FindAll(x => x.CardRarity == cardRarity));
-            return newCards;
-        }
-
-        public List<Card> GetSortedCardsByLevel(List<Card> cards)
-        {
-            List<Card> sortedCards = new List<Card>();
-
-            for (int i = 1; i <= 10; i++)
-            {
-                sortedCards.AddRange(GetSortedCardsByRarity(cards.FindAll(x => x.CardStateModel.cardLevel == i)));
-            }
-
-            return sortedCards;
+            return default;
         }
 
         #endregion

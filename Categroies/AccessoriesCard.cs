@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -10,7 +11,7 @@ namespace MoonKart
         public enum AccessoriesType
         {
             Antennas,
-            Wheels,
+            Rim,
             Exhaust
         }
 
@@ -32,6 +33,12 @@ namespace MoonKart
         {
             MyAccessoriesType = (AccessoriesType)cardTemplateModel.cardSubType;
             _modelName = cardTemplateModel.modelName;
+        }
+
+        internal void UpdateLevel(TechTemplateModel accessories)
+        {
+            SetPrimaryProperty(accessories.primaryPropertyModel);
+            SetSecondaryProperty(accessories.secondaryPropertyModel);
         }
     }
 }

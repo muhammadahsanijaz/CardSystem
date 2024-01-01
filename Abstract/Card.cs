@@ -34,7 +34,9 @@ namespace MoonKart
         Equip = 1,
         Staking = 2,
         Merge = 3,
-        Staked = 4
+        Staked = 4,
+        Applied = 5,
+        CoolDown = 6,
     }
 
     /// <summary>
@@ -57,12 +59,22 @@ namespace MoonKart
 
         public CardCategory CardCategory
         {
-            get => _cardTemplateModel.cardCategory;
+            get
+            {
+                if (_cardTemplateModel == null)
+                    return CardCategory.Regular;
+                return _cardTemplateModel.cardCategory;
+            }
         }
 
         public CardRarity CardRarity
         {
-            get => _cardTemplateModel.cardRarity;
+            get
+            {
+                if (_cardTemplateModel == null)
+                    return CardRarity.Common;
+                return _cardTemplateModel.cardRarity;
+            }
         }
 
         public Sprite Icon
@@ -72,7 +84,12 @@ namespace MoonKart
 
         public string Description
         {
-            get => _cardTemplateModel.description;
+            get
+            {
+                if (_cardTemplateModel == null)
+                    return "";
+                return _cardTemplateModel.description;
+            }
         }
 
         public DateTime StackedTime
@@ -125,7 +142,7 @@ namespace MoonKart
         private Sprite _icon;
         private string _stackedTime;
 
-        private bool _isInitialized;
+        internal bool IsInitialized;
 
         // Constructors
         protected Card(int id, CardTemplateModel cardTemplateModel)
@@ -133,7 +150,7 @@ namespace MoonKart
             _cardTemplateModel = cardTemplateModel;
             Id = id;
             _cardName = cardTemplateModel.templateName;
-            _isInitialized = true;
+            IsInitialized = true;
         }
 
         protected Card()
@@ -148,44 +165,70 @@ namespace MoonKart
 
         public void EquipCard()
         {
-            if (!_isInitialized || CardStateModel.cardState != CardState.None)
+            if (!IsInitialized || CardStateModel.cardState != CardState.None)
                 return;
             CardStateModel.cardState = CardState.Equip;
         }
 
         public void UnEquipCard()
         {
-            if (!_isInitialized || CardStateModel.cardState != CardState.Equip)
+            if (!IsInitialized || CardStateModel.cardState != CardState.Equip)
                 return;
             CardStateModel.cardState = CardState.None;
         }
 
-        public void StackCard()
+        public void ApplyCard()
         {
-            if (!_isInitialized || CardStateModel.cardState != CardState.None)
+            if (!IsInitialized || CardStateModel.cardState != CardState.None)
                 return;
-            //_timeUTC = timeUTC;
+            CardStateModel.cardState = CardState.Applied;
+        }
+
+        public void UnapplyCard()
+        {
+            if (!IsInitialized || CardStateModel.cardState != CardState.Applied)
+                return;
+            CardStateModel.cardState = CardState.None;
+        }
+
+        public void StakingCard()
+        {
+            if (!IsInitialized || CardStateModel.cardState != CardState.Applied)
+                return;
             CardStateModel.cardState = CardState.Staking;
         }
 
-        public void UnStackCard()
+        public void StakeCard()
         {
-            if (!_isInitialized || CardStateModel.cardState != CardState.Staked)
+            if (!IsInitialized || CardStateModel.cardState != CardState.Staking)
                 return;
-            //_timeUTC = "";
+            CardStateModel.cardState = CardState.Staked;
+        }
+
+        public void CoolDownCard()
+        {
+            if (!IsInitialized || CardStateModel.cardState != CardState.Staked)
+                return;
+            CardStateModel.cardState = CardState.CoolDown;
+        }
+
+        public void UnStakeCard()
+        {
+            if (!IsInitialized || CardStateModel.cardState != CardState.CoolDown)
+                return;
             CardStateModel.cardState = CardState.None;
         }
 
         public void MergeCard()
         {
-            if (!_isInitialized || CardStateModel.cardState != CardState.None)
+            if (!IsInitialized || CardStateModel.cardState != CardState.None)
                 return;
             CardStateModel.cardState = CardState.Merge;
         }
 
         public void UnMergeCard()
         {
-            if (!_isInitialized || CardStateModel.cardState != CardState.Merge)
+            if (!IsInitialized || CardStateModel.cardState != CardState.Merge)
                 return;
             CardStateModel.cardState = CardState.None;
         }
@@ -193,6 +236,11 @@ namespace MoonKart
 
         public void SetIcon(Sprite icon)
         {
+            if (icon == null)
+            {
+                Debug.LogError("Icon Not Found");
+                return;
+            }
             _icon = icon;
         }
     }

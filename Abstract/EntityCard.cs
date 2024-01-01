@@ -25,8 +25,8 @@ namespace MoonKart
         public EntityCard(int id, CardTemplateModel cardTemplateModel) : base(id, cardTemplateModel)
         {
             modelName = cardTemplateModel.modelName;
-            vehicleStats = new VehicleStats();
-            vehicleStats.CopyVehicleStats(cardTemplateModel.VehicleStats);
+            vehicleStats = new VehicleStats(cardTemplateModel.VehicleStats);
+            //vehicleStats.CopyVehicleStats(cardTemplateModel.VehicleStats);
         }
 
 

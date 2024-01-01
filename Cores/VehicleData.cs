@@ -14,6 +14,22 @@ namespace MoonKart
         public float Health;
         public float Acceleration;
 
+        public VehicleStats(float speed, float handling, float health, float acceleration)
+        {
+            this.Speed = speed;
+            this.Handling = handling;
+            this.Health = health;
+            this.Acceleration = acceleration;
+        }
+
+        public VehicleStats(VehicleStats vehicleStats)
+        {
+            this.Speed = vehicleStats.Speed;
+            this.Handling = vehicleStats.Handling;
+            this.Health = vehicleStats.Health;
+            this.Acceleration = vehicleStats.Acceleration;
+        }
+
         public void CopyVehicleStats(VehicleStats vehicleStats)
         {
             Speed = vehicleStats.Speed;
@@ -87,9 +103,9 @@ namespace MoonKart
             set => _powerupCards = value;
         }
 
-        public AccessoriesCard WheelCard
+        public AccessoriesCard RimCard
         {
-            get => _wheelCard;
+            get => _rimCard;
         }
 
         public AccessoriesCard AntennaCard
@@ -116,19 +132,28 @@ namespace MoonKart
         [SerializeField]
         private DriverCard _driverCard;
         [SerializeField]
-        private AccessoriesCard _wheelCard, _antennaCard, _exhaustCard;
+        private AccessoriesCard _rimCard, _antennaCard, _exhaustCard;
         [SerializeField]
         private TechCard[] _techCards;
         [SerializeField]
         private PowerupCard[] _powerupCards;
 
 
-        public VehicleData(VehicleCard vehicleCard, DriverCard driverCard)
+        public VehicleData(VehicleCard vehicleCard, DriverCard driverCard, AccessoriesCard Antenna, AccessoriesCard Exhaust, AccessoriesCard Rim)
         {
             _vehicleCard = vehicleCard;
+            _vehicleCard.EquipCard();
             _driverCard = driverCard;
+            _driverCard.EquipCard();
+            _antennaCard = Antenna;
+            _antennaCard.EquipCard();
+            _exhaustCard = Exhaust;
+            _exhaustCard.EquipCard();
+            _rimCard = Rim;
+            _rimCard.EquipCard();
+
             _techCards = new TechCard[4];
-            _powerupCards = new PowerupCard[VehicleCard.VehicleSlots.PowerupSlots];
+            _powerupCards = new PowerupCard[_vehicleCard.VehicleSlots.PowerupSlots];
         }
 
         public void CalculateProperities()
@@ -138,31 +163,32 @@ namespace MoonKart
                 Debug.LogError("Vehicle card is null. Check Card Library");
                 return;
             }
-            _vehicleStats = new VehicleStats();
+            _vehicleStats = new VehicleStats(_vehicleCard.VehicleStats);
             _vehicleStats.CopyVehicleStats(_vehicleCard.VehicleStats);
             _vehicleStats.CalculateValues(_driverCard.VehicleStats);
-            if (_techCards == null)
+            if (_techCards == null || _techCards.Length == 0)
             {
                 _techCards = new TechCard[4];
             }
             if (_powerupCards == null)
             {
-                _powerupCards = new PowerupCard[VehicleCard.VehicleSlots.PowerupSlots];
+                _powerupCards = new PowerupCard[_vehicleCard.VehicleSlots.PowerupSlots];
             }
 
             foreach (var tech in _techCards)
             {
                 if (tech != null)
                 {
+                    Debug.LogError("Called 2");
                     VehicleStats.CalculateValues(tech.PrimaryProperty);
                     VehicleStats.CalculateValues(tech.SecondaryProperty);
                 }
             }
 
-            if (_wheelCard != null)
+            if (_rimCard != null)
             {
-                VehicleStats.CalculateValues(_wheelCard.PrimaryProperty);
-                VehicleStats.CalculateValues(_wheelCard.SecondaryProperty);
+                VehicleStats.CalculateValues(_rimCard.PrimaryProperty);
+                VehicleStats.CalculateValues(_rimCard.SecondaryProperty);
             }
             if (_antennaCard != null)
             {
@@ -176,19 +202,18 @@ namespace MoonKart
             }
         }
 
-        internal void SetVehicleCard(VehicleCard card, bool isEquip = true)
+        internal void SetVehicleCard(VehicleCard card)
         {
-            _vehicleCard = (isEquip) ? card : null;
-            UpdateEquipedSlots();
-        }
-
-        private void UpdateEquipedSlots()
-        {
-            _techCards = new TechCard[4];
-            _powerupCards = new PowerupCard[VehicleCard.VehicleSlots.PowerupSlots];
-            _exhaustCard = null;
-            _antennaCard = null;
-            _wheelCard = null;
+            _vehicleCard = card;
+            if (_powerupCards != null)
+            {
+                foreach (var cards in _powerupCards)
+                {
+                    if (cards != null && cards.CardName != "")
+                        cards.UnEquipCard();
+                }
+            }
+            _powerupCards = new PowerupCard[_vehicleCard.VehicleSlots.PowerupSlots];
         }
 
         internal void UnloadAssets()
@@ -199,17 +224,17 @@ namespace MoonKart
             _driverCard = null;
             _exhaustCard = null;
             _antennaCard = null;
-            _wheelCard = null;
+            _rimCard = null;
         }
 
-        internal void SetDriverCard(DriverCard card, bool isEquip = true)
+        internal void SetDriverCard(DriverCard card)
         {
-            _driverCard = (isEquip) ? card : null;
+            _driverCard = card;
         }
 
         internal void SetPowerupCard(PowerupCard card,int slot, bool isEquip = true)
         {
-            if (_powerupCards == null) _powerupCards = new PowerupCard[VehicleCard.VehicleSlots.PowerupSlots];
+            if (_powerupCards == null) _powerupCards = new PowerupCard[_vehicleCard.VehicleSlots.PowerupSlots];
 
             if (isEquip)
             {
@@ -221,31 +246,32 @@ namespace MoonKart
             }
         }
 
-        internal void SetTechCard(TechCard card,int slot, bool isEquip = true)
+        internal void SetTechCard(TechCard card,int subType, bool isEquip = true)
         {
-            if (_techCards == null) _techCards = new TechCard[4];
+            if (_techCards == null || _techCards.Length == 0) 
+                _techCards = new TechCard[4];
             if (isEquip)
             {
-                _techCards[slot] = card;
+                _techCards[subType] = card;
             }
             else
             {
-                _techCards[slot] = null;
+                _techCards[subType] = null;
             }
         }
 
-        internal void SetAccessoriesCard(AccessoriesCard card, bool isEquip = true)
+        internal void SetAccessoriesCard( AccessoriesCard card, AccessoriesCard.AccessoriesType accessory)
         {
-            switch (card.MyAccessoriesType)
+            switch (accessory)
             {
                 case AccessoriesCard.AccessoriesType.Antennas:
-                    _antennaCard = (isEquip) ? card : null;
+                    _antennaCard = card;
                     break;
-                case AccessoriesCard.AccessoriesType.Wheels:
-                    _wheelCard = (isEquip) ? card : null;
+                case AccessoriesCard.AccessoriesType.Rim:
+                    _rimCard = card;
                     break;
                 case AccessoriesCard.AccessoriesType.Exhaust:
-                    _exhaustCard = (isEquip) ? card : null;
+                    _exhaustCard = card;
                     break;
             }
         }

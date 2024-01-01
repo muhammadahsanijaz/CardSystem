@@ -18,13 +18,16 @@ namespace MoonKart
 		// PUBLIC MEMBERS
 
 		public string DefaultCar => _defaultCar;
+		public int FuelTimeInHours => FuelTimeInHours;
+		public int TotalFuel => TotalFuel;
 		public CarSetup[] Cars => _cars;
-
 		// PRIVATE MEMBERS
 
 		
 		[SerializeField]
 		private string _defaultCar;
+		
+		[SerializeField]private Sprite[] defaultCarIcon;
 
 	#if ODIN_INSPECTOR
 		[SerializeField, ListDrawerSettings(Expanded = true)]
@@ -83,17 +86,22 @@ namespace MoonKart
 		[SerializeField]
 		private VehicleData _vehicleData;
 		[NonSerialized] private GameObject _cachedCarPrefab;
+		[NonSerialized] private GameObject _cachedDriverPrefab;
+		[SerializeField] private bool _isSaved = false;
 
 		// PUBLIC MEMBERS
 
 		public string ID => _id;
+		public bool IsSaved => _isSaved;
 		public string DisplayName => _vehicleData.VehicleCard?.CardName;
 		public string Description => _vehicleData.VehicleCard?.Description;
 
 		public VehicleData VehicleData => _vehicleData;
 
 		// PUBLIC METHODS
-		[JsonIgnore]
+
+		//////////////// Car Prototype
+
 		public AssetRefEntityPrototype CarPrototype
 		{
 			get
@@ -101,14 +109,13 @@ namespace MoonKart
 				return Global.Settings.CardsSetting.GetVehicleAssetRef(_vehicleData.VehicleCard);
 			}
 		}
-		[JsonIgnore]
+
 		public GameObject CarPrefab
 		{
 			get
 			{
                 if (_cachedCarPrefab == null)
                 {
-					Log.Error(_vehicleData.VehicleCard.ModelName);
 					_cachedCarPrefab = Global.Settings.CardsSetting.GetCardModel(_vehicleData.VehicleCard);
                     //var prototypeAsset = UnityDB.FindAsset<EntityPrototypeAsset>(_carPrototype.Id);
                     //_cachedCarPrefab = prototypeAsset != null && prototypeAsset.Parent != null ? prototypeAsset.Parent.gameObject : null;
@@ -118,11 +125,26 @@ namespace MoonKart
 			}
 		}
 
-        internal void SetNewCarSetup(VehicleCard vehicleCard, DriverCard driverCard)
+
+		public GameObject DriverPrefab
+		{
+			get
+			{
+				if (_cachedDriverPrefab == null)
+				{
+					_cachedDriverPrefab = Global.Settings.CardsSetting.GetCardModel(_vehicleData.DriverCard);
+				}
+
+				return _cachedDriverPrefab;
+			}
+		}
+
+		internal void SetNewCarSetup(VehicleCard vehicleCard, DriverCard driverCard, 
+			AccessoriesCard Antenna, AccessoriesCard Exhaust, AccessoriesCard Rim , int currentCar)
         {
-			_vehicleData = new VehicleData(vehicleCard, driverCard);
+			_vehicleData = new VehicleData(vehicleCard, driverCard, Antenna, Exhaust, Rim);
 			_vehicleData.CalculateProperities();
-			SaveCarSetup();
+			SaveCarSetup(false);
 		}
 
 		public void InitializeCarSetup()
@@ -131,34 +153,35 @@ namespace MoonKart
 		}
 
 
-		public void UpdateCarSetup(Card card,int slot, bool isEquip)
+		public void UpdateCarSetup( Card card, int subType,bool isEquip)
         {
 			if(card is VehicleCard)
             {
-				_vehicleData.SetVehicleCard(card as VehicleCard, isEquip);
+				_vehicleData.SetVehicleCard(card as VehicleCard);
 			}
 			else if (card is DriverCard)
 			{
-				_vehicleData.SetDriverCard(card as DriverCard, isEquip);
+				_vehicleData.SetDriverCard(card as DriverCard);
 			}
 			else if (card is PowerupCard)
 			{
-				_vehicleData.SetPowerupCard(card as PowerupCard,slot, isEquip);
+				_vehicleData.SetPowerupCard(card as PowerupCard, subType, isEquip);
 			}
 			else if (card is TechCard)
 			{
-				_vehicleData.SetTechCard(card as TechCard,slot, isEquip);
+				_vehicleData.SetTechCard( card as TechCard, subType, isEquip);
 			}
 			else if (card is AccessoriesCard)
 			{
-				_vehicleData.SetAccessoriesCard(card as AccessoriesCard, isEquip);
+				_vehicleData.SetAccessoriesCard(card as AccessoriesCard, (AccessoriesCard.AccessoriesType)subType);
 			}
 			_vehicleData.CalculateProperities();
         }
 
 
-		internal void SaveCarSetup()
+		internal void SaveCarSetup(bool isSaved)
         {
+			_isSaved = isSaved;
 			PersistentStorage.SetObjectWithJsonUtility(ID,this,true);
 		}
         
@@ -167,22 +190,16 @@ namespace MoonKart
 		{
 			_cachedCarPrefab = null;
 			_vehicleData.UnloadAssets();
+			
 
 		}
 
         internal void ResetSetup(CarSetup carSetup)
         {
+	       
 			VehicleData.TechCards = carSetup.VehicleData.TechCards;
 			VehicleData.PowerupCards = carSetup.VehicleData.PowerupCards;
 		}
     }
 
-	[Serializable]
-	public enum ECarDifficulty
-	{
-		None,
-		Easy,
-		Normal,
-		Hard,
-	}
 }

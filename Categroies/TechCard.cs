@@ -30,7 +30,8 @@ namespace MoonKart
 
         public void UpdateLevel(TechTemplateModel level)
         {
-
+            SetPrimaryProperty(level.primaryPropertyModel);
+            SetSecondaryProperty(level.secondaryPropertyModel);
         }
     }
 }

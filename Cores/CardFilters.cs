@@ -14,6 +14,7 @@ namespace MoonKart
         Yes,
         No
     }
+    
     public enum CardCategoryFilter
     {
         All = -1,
@@ -73,6 +74,7 @@ namespace MoonKart
             ChangeAllCardHandlerParentsTo(containerTransform);
             cardFilterDataModel.currentCards = ProcessCardHandlersByType(cardsManager, cardFilterData);
         }
+   
 
         public void ChangeAllCardHandlerParentsTo(Transform containerTransform)
         {
@@ -88,6 +90,7 @@ namespace MoonKart
             cards = ShowOnCardCategory(cards, cardSearchData.cardCategory);
             cards = ShowCardRarity(cards, cardSearchData.cardRarity);
             cards = ShowCardSearch(cards, cardSearchData.searchString);
+            
             return cards;
         }
 
@@ -167,23 +170,25 @@ namespace MoonKart
             return cards;
         }
 
-        public List<CardHandler> EnableCardHandlers(List<Card> cards, Action<int, CardUseState> OnCloseCallBack, CardCallFrom callFromVault, string equipButtonName = "Equip", string unEquipButtonName = "UnEquip")
+        public List<CardHandler> EnableCardHandlers(List<CardHandler> cardHandlers, Action<int, CardUseState> OnCloseCallBack, CardCallFrom cardCallFrom, string equipButtonName = "Equip", string unEquipButtonName = "UnEquip", float cardSize = 0.9f)
         {
-            var cardHandlers = new List<CardHandler>();
-            foreach (var card in cards)
-            {
-                cardHandlers.Add(cardFilterDataModel.allCardHandlers.Find(x => x.Card == card));
-            }
-
+            int siblingIndex = 0;
             foreach (var cardHandler in cardHandlers)
             {
+                cardHandler.transform.SetSiblingIndex(siblingIndex);
                 cardHandler.OnCloseCallBack = OnCloseCallBack;
                 cardHandler.defaultEquipButtonText = equipButtonName;
                 cardHandler.defaultUnEquipButtonText = unEquipButtonName;
-                cardHandler.callFromVault = callFromVault;
-                cardHandler.transform.localScale = new Vector3(.9f, .9f, .9f);
+                cardHandler.cardCallFrom = cardCallFrom;
+                cardHandler.transform.localScale = new Vector3(cardSize, cardSize, cardSize);
                 cardHandler.SetActive(true);
                 cardHandler.Visible();
+                if (cardCallFrom == CardCallFrom.Vault && cardCallFrom == CardCallFrom.CardMerge && !cardHandler.Card.IsInitialized)
+                {
+                    cardHandler.Hidden();
+                    cardHandler.SetActive(false);
+                }
+                siblingIndex++;
             }
 
             return cardHandlers;
@@ -200,7 +205,6 @@ namespace MoonKart
 
         public void DisableAllCardHandlers()
         {
-            
             foreach (var cardHandler in cardFilterDataModel.allCardHandlers)
             {
                 cardHandler.Hidden();
@@ -256,7 +260,7 @@ namespace MoonKart
             return newCards;
         }
 
-        private List<Card> GetTypeOfPowerupCard(List<Card> cards, PowerupCard.PowerupType currentPowerupType)
+        private List<Card> GetTypeOfPowerupCard(List<Card> cards, PowerupType currentPowerupType)
         {
             List<Card> newCards = new List<Card>();
             foreach (var card in cards)
@@ -278,12 +282,17 @@ namespace MoonKart
             var cards = cardsController.Cards;
             foreach (var card in cards)
             {
-                var cardHandler = cardsController.CreateCardHandler(cardsContainerTransform, card);
-                cardHandler.Initialize(menuUI, cardHandler);
-                cardHandler.Hidden();
-                cardHandler.SetActive(false);
-                cardFilterDataModel.allCardHandlers.Add(cardHandler);
+                CreateNewCardHandler(cardsController, card, menuUI, cardsContainerTransform);
             }
+        }
+
+        public void CreateNewCardHandler(CardsManager cardsController,Card card, MenuUI menuUI, Transform cardsContainerTransform)
+        {
+            var cardHandler = cardsController.CreateCardHandler(cardsContainerTransform, card);
+            cardHandler.Initialize(menuUI, cardHandler);
+            cardHandler.Hidden();
+            cardHandler.SetActive(false);
+            cardFilterDataModel.allCardHandlers.Add(cardHandler);
         }
 
 
@@ -310,7 +319,7 @@ namespace MoonKart
                 }
                 else if (filterData.cardType == typeof(PowerupCard))
                 {
-                    var powerupType = (PowerupCard.PowerupType)filterData.category;
+                    var powerupType = (PowerupType)filterData.category;
                     cards = GetTypeOfPowerupCard(cards, powerupType);
                 }
             }
@@ -318,6 +327,39 @@ namespace MoonKart
             // Apply Sorting here
 
             return cards;
+        }
+        
+        public int GetTotalCard(CardsManager cardsManager, SlotsActionData filterData)
+        {
+            var cards = cardsManager.GetCardsByTypeOf(cardsManager.Cards, filterData.cardType);
+
+            if (filterData.cardType == typeof(Card))
+            {
+                cards = cardsManager.Cards;
+            }
+
+            if (filterData.category != -1)
+            {
+                if (filterData.cardType == typeof(TechCard))
+                {
+                    var techType = (TechCard.TechType)filterData.category;
+                    cards = GetTypeOfTechCard(cards, techType);
+                }
+                else if (filterData.cardType == typeof(AccessoriesCard))
+                {
+                    var accessoriesType = (AccessoriesCard.AccessoriesType)filterData.category;
+                    cards = GetTypeOfAccessoriesCard(cards, accessoriesType);
+                }
+                else if (filterData.cardType == typeof(PowerupCard))
+                {
+                    var powerupType = (PowerupType)filterData.category;
+                    cards = GetTypeOfPowerupCard(cards, powerupType);
+                }
+            }
+
+            // Apply Sorting here
+
+            return cards.Count;
         }
 
         public void ClearCardHandlerList()
@@ -335,5 +377,78 @@ namespace MoonKart
             return cardFilterDataModel.allCardHandlers.Find(x => x.Card == card);
             
         }
+
+        internal List<CardHandler> GetCardHandlers(List<Card> cards)
+        {
+            List<CardHandler> newCardHandlers = new List<CardHandler>();
+            foreach (var cardHandler in cardFilterDataModel.allCardHandlers)
+            {
+                if (cards.Contains(cardHandler.Card))
+                {
+                    newCardHandlers.Add(cardHandler);
+                }
+            }
+            return newCardHandlers;
+        }
+
+        // All Sorted Functions
+        public List<CardHandler> GetAllSortedCards(List<CardHandler> cards)
+        {
+            List<CardHandler> sortedCards = new List<CardHandler>();
+            sortedCards.AddRange(cards.FindAll(x => x.GetType() == typeof(VehicleCard)));
+            sortedCards.AddRange(cards.FindAll(x => x.GetType() == typeof(DriverCard)));
+            // Sorting Tech Cards
+            List<CardHandler> techCards = cards.FindAll(x => x.GetType() == typeof(TechCard));
+            string[] techTypeNames = Enum.GetNames(typeof(TechCard.TechType));
+            foreach (var techTypeName in techTypeNames)
+            {
+                sortedCards.AddRange(techCards.FindAll(x => (x.Card as TechCard)?.MyTechType.ToString() == techTypeName));
+            }
+            // Sorting Powerup Cards
+            List<CardHandler> powerupCards = cards.FindAll(x => x.GetType() == typeof(PowerupCard));
+            string[] powerupTypeNames = Enum.GetNames(typeof(TechCard.TechType));
+            foreach (var powerupTypeName in powerupTypeNames)
+            {
+                sortedCards.AddRange(powerupCards.FindAll(x => (x.Card as PowerupCard)?.MyPowerupType.ToString() == powerupTypeName));
+            }
+            // Sorting Accessories Cards
+            List<CardHandler> accessoriesCards = cards.FindAll(x => x.GetType() == typeof(AccessoriesCard));
+            string[] accessoriesTypeNames = Enum.GetNames(typeof(TechCard.TechType));
+            foreach (var accessoriesTypeName in accessoriesTypeNames)
+            {
+                sortedCards.AddRange(accessoriesCards.FindAll(x => (x.Card as AccessoriesCard)?.MyAccessoriesType.ToString() == accessoriesTypeName));
+            }
+            return sortedCards;
+        }
+
+        public List<CardHandler> GetSortedCardsByRarity(List<CardHandler> cards)
+        {
+            List<CardHandler> newCards = new List<CardHandler>();
+            newCards.AddRange(cards.FindAll(x => x.Card.CardRarity == CardRarity.Legendary));
+            newCards.AddRange(cards.FindAll(x => x.Card.CardRarity == CardRarity.Epic));
+            newCards.AddRange(cards.FindAll(x => x.Card.CardRarity == CardRarity.Rare));
+            newCards.AddRange(cards.FindAll(x => x.Card.CardRarity == CardRarity.Common));
+            return newCards;
+        }
+
+        public List<CardHandler> GetCardsByRarity(List<CardHandler> cards, CardRarity cardRarity)
+        {
+            List<CardHandler> newCards = new List<CardHandler>();
+            newCards.AddRange(cards.FindAll(x => x.Card.CardRarity == cardRarity));
+            return newCards;
+        }
+
+        public List<CardHandler> GetSortedCardsByLevel(List<CardHandler> cards)
+        {
+            List<CardHandler> sortedCards = new List<CardHandler>();
+
+            for (int i = 1; i <= 10; i++)
+            {
+                sortedCards.AddRange(GetSortedCardsByRarity(cards.FindAll(x => x.Card.CardStateModel.cardLevel == i)));
+            }
+
+            return sortedCards;
+        }
+
     }
 }
